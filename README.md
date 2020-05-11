@@ -35,7 +35,7 @@ Simulation #4 (../config/1_Intro.txt)
 ### scenario 2: Body rate and roll/pitch control ###
 **1. Implement body rate control**
 
- - implement the code in the function `GenerateMotorCommands()`
+ - _implement the code in the function `GenerateMotorCommands()`_<br>
  This was pretty tricky for me as it was different to the what we implemented in the coursework. However taking a logical approach to this problem was key. It came down to solving the force matrix (below) by first calculating the Roll, Pitch and Yaw commands from the moments.
  
  
@@ -49,9 +49,16 @@ Simulation #4 (../config/1_Intro.txt)
  <p align="center">
    <img src="animations/drone1_1.png" width="500">
  </p>
+ 
+ Finally the *CONSTRAIN* command was utilised to keep motor thrust within the configuration limits.
+ 
+ ```C++
+    cmd.desiredThrustsN[0] = CONSTRAIN(0.25f * (collThrustCmd + fx + fy + fz), minMotorThrust, maxMotorThrust); // front left
+    cmd.desiredThrustsN[1] = CONSTRAIN(0.25f * (collThrustCmd - fx + fy - fz), minMotorThrust, maxMotorThrust); // front right
+    cmd.desiredThrustsN[2] = CONSTRAIN(0.25f * (collThrustCmd + fx - fy - fz), minMotorThrust, maxMotorThrust); // rear left
+    cmd.desiredThrustsN[3] = CONSTRAIN(0.25f * (collThrustCmd - fx - fy + fz), minMotorThrust, maxMotorThrust); // rear right
     
- 
- 
+ ```
  
  - implement the code in the function `BodyRateControl()`
  
@@ -62,14 +69,17 @@ Simulation #4 (../config/1_Intro.txt)
 **Evaluation:**
    - roll should less than 0.025 radian of nominal for 0.75 seconds (3/4 of the duration of the loop)
    - roll rate should less than 2.5 radian/sec for 0.75 seconds
-   
+```
+Simulation #30 (../config/2_AttitudeControl.txt)
+PASS: ABS(Quad.Roll) was less than 0.025000 for at least 0.750000 seconds
+PASS: ABS(Quad.Omega.X) was less than 2.500000 for at least 0.750000 seconds
+```
 
  ### scenario 3: Position/velocity and yaw angle control ###
  
  **Evaluation:**
    - X position of both drones should be within 0.1 meters of the target for at least 1.25 seconds
    - Quad2 yaw should be within 0.1 of the target for at least 1 second
-
 
  ### scenario 4: Non-idealities and robustness ###
  
