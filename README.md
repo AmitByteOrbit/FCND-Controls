@@ -33,7 +33,7 @@ Simulation #4 (../config/1_Intro.txt)
 ```
 
 ### scenario 2: Body rate and roll/pitch control ###
-**1. Implement body rate control**
+**1. Implement`GenerateMotorCommands()`**
 
  - _implement the code in the function `GenerateMotorCommands()`_<br>
  This was pretty tricky for me as it was different to the what we implemented in the coursework. However taking a logical approach to this problem was key. It came down to solving the force matrix (below) by first calculating the Roll, Pitch and Yaw commands from the moments.
@@ -60,11 +60,15 @@ Simulation #4 (../config/1_Intro.txt)
     
  ```
  
- - implement the code in the function `BodyRateControl()`
- 
+ **2. Implement `BodyRateControl()`** 
  
  - Tune `kpPQR` in `QuadControlParams.txt` to get the vehicle to stop spinning quickly but not overshoot
  
+ **3. Implement `RollPitchControl()`**
+ 
+ <p align="center">
+<img src="animations/scenario_2.gif" width="500"/>
+</p>
  
 **Evaluation:**
    - roll should less than 0.025 radian of nominal for 0.75 seconds (3/4 of the duration of the loop)
