@@ -26,25 +26,59 @@ cmd.desiredThrustsN[3] = mass * 9.81f / 4.f; // rear right
 <img src="animations/scenario_1.gif" width="500"/>
 </p>
 
-Evaluation:
+**Evaluation:**
 ```
 PASS: ABS(Quad.PosFollowErr) was less than 0.500000 for at least 0.800000 seconds
 Simulation #4 (../config/1_Intro.txt)
 ```
 
 ### scenario 2: Body rate and roll/pitch control ###
+**1. Implement body rate control**
+
+ - implement the code in the function `GenerateMotorCommands()`
+ This was pretty tricky for me as it was different to the what we implemented in the coursework. However taking a logical approach to this problem was key. It came down to solving the force matrix (below) by first calculating the Roll, Pitch and Yaw commands from the moments.
+ 
+ 
+ _Collective Thrust: F1 + F2 + F3 + F4 = Tf<br>
+  Roll Command:      F1 + F2 + F3 + F4 = Tx/l<br>
+ Pitch Command:     F1 + F2 + F3 + F4 = Ty/l<br>
+ Yaw Command:       F1 + F2 + F3 + F4 = Tz/kappa_<br>
+ 
+ 
+ It was important to pay attention to the rotor positions. The above is base on the following:
+ <p align="center">
+   <img src="animations/drone1_1.png" width="500">
+ </p>
+    
+ 
+ 
+ 
+ - implement the code in the function `BodyRateControl()`
+ 
+ 
+ - Tune `kpPQR` in `QuadControlParams.txt` to get the vehicle to stop spinning quickly but not overshoot
+ 
+ 
+**Evaluation:**
    - roll should less than 0.025 radian of nominal for 0.75 seconds (3/4 of the duration of the loop)
    - roll rate should less than 2.5 radian/sec for 0.75 seconds
+   
 
  ### scenario 3: Position/velocity and yaw angle control ###
+ 
+ **Evaluation:**
    - X position of both drones should be within 0.1 meters of the target for at least 1.25 seconds
    - Quad2 yaw should be within 0.1 of the target for at least 1 second
 
 
  ### scenario 4: Non-idealities and robustness ###
+ 
+ **Evaluation:**
    - position error for all 3 quads should be less than 0.1 meters for at least 1.5 seconds
 
  ### scenario 5: Tracking trajectories ###
+ 
+ **Evaluation:**
    - position error of the quad should be less than 0.25 meters for at least 3 seconds
 
 ### Body rate and roll/pitch control (scenario 2) ###
