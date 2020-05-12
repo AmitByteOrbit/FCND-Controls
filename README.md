@@ -74,7 +74,7 @@ Next it was the initial tuning of `kpPQR` in `QuadControlParams.txt` to get the 
  
  **3. Implement `RollPitchControl()`**
  
- This one was a bit tricky with the _collThrustCmd_ being in N. In the course work it was implemented differently but applying the equatino F=ma it was easy enough to convert and once that was solved the rest was pretty inline with the equations for calculation the pqr commands using the rotation matrix.
+ This one was a bit tricky with the _collThrustCmd_ being in N. In the course work it was implemented differently but applying the equation *F=ma* it was easy enough to convert and once that was solved the rest was pretty inline with the equations for calculation the pqr commands using the rotation matrix.
  
  ```C++
  if (collThrustCmd > 0.0) {
@@ -96,6 +96,7 @@ Next it was the initial tuning of `kpPQR` in `QuadControlParams.txt` to get the 
     }
  ```
  
+ After a bit of tuning of `kpPQR` and `kpBank` stable flight was achieved! 
  
  <p align="center">
 <img src="animations/scenario_2.gif" width="500"/>
@@ -113,14 +114,70 @@ PASS: ABS(Quad.Omega.X) was less than 2.500000 for at least 0.750000 seconds
  ## scenario 3: Position/velocity and yaw angle control ##
  
  **1. Implement `LateralPositionControl()`**
+ The tricky part of implementing LateralPositionControl was figuring out which values to clamp. I chose to clamp the _commaded velocity_ and the _feed forward acceleration_ values but I look forward from the examiner as to whether this is correct. Note: `accelCmd` is always initialized with the _feed forward_ value hence clamping `accelCmd`.
+ 
+ ```C++
+ V3F p_term;
+    V3F d_term;
+    
+    p_term = kpPosXY * (posCmd - pos);
+    
+    if (velCmd.magXY() > maxSpeedXY) {
+        velCmd = velCmd * maxSpeedXY / velCmd.magXY();
+    }
+    
+    d_term - kpVelXY * (velCmd - vel);
+        
+    if (accelCmd.magXY() > maxAccelXY){
+        accelCmd = accelCmd * maxAccelXY / accelCmd.magXY();
+    }
+    
+    accelCmd = kpPosXY * (posCmd - pos) + kpVelXY * (velCmd - vel) + accelCmd;
+ ```
  
  **2. Implement `AltitudeControl()`**
+ Altitude Control was implemented as a PD controller with clamping on the velocity. Later on for scenario 4 this was converted to a PID controller by implementing basic integral control.
  
- **3. Implement  `YawControl()`**
+ ```C++
+ float z_vel =  CONSTRAIN(kpPosZ * (posZCmd - posZ ) + velZCmd, -maxDescentRate, maxAscentRate);
+    integratedAltitudeError += (posZCmd - posZ) * dt;
+    float u_bar = + kpVelZ * (z_vel - velZ) + (KiPosZ * integratedAltitudeError) + accelZCmd;
+    
+    thrust = -(mass * (u_bar - CONST_GRAVITY) / R(2,2));
+ ```
+ 
+ **3. Implement `YawControl()`**
+ Implemented a P controller for yaw command and added optimization for clockwise vs counter-clockwise rotation.
+ 
+ ```C++
+ yawCmd = fmodf(yawCmd, 2.f * M_PI);
+    float yaw_err = yawCmd - yaw;
+    
+    if (yaw_err > M_PI){
+        yaw_err -= 2.f * M_PI;
+    } else if (yaw_err < -M_PI) {
+        yaw_err += 2.f * M_PI;
+    }
+    
+    yawRateCmd = kpYaw * yaw_err;
+ ```
+ After tuning the `kpYaw` and the (z) component of `kpPQR` we have success!
+ 
+ <p align="center">
+<img src="animations/scenario_3.gif" width="500"/>
+</p>
+ 
  
  **Evaluation:**
    - X position of both drones should be within 0.1 meters of the target for at least 1.25 seconds
    - Quad2 yaw should be within 0.1 of the target for at least 1 second
+   
+ ```
+ Simulation #56 (../config/3_PositionControl.txt)
+PASS: ABS(Quad1.Pos.X) was less than 0.100000 for at least 1.250000 seconds
+PASS: ABS(Quad2.Pos.X) was less than 0.100000 for at least 1.250000 seconds
+PASS: ABS(Quad2.Yaw) was less than 0.100000 for at least 1.000000 seconds
+```
 
  ## scenario 4: Non-idealities and robustness ##
  
@@ -135,28 +192,6 @@ PASS: ABS(Quad.Omega.X) was less than 2.500000 for at least 0.750000 seconds
  **Evaluation:**
    - position error of the quad should be less than 0.25 meters for at least 3 seconds
 
-
-### Position/velocity and yaw angle control (scenario 3) ###
-
-Next, you will implement the position, altitude and yaw control for your quad.  For the simulation, you will use `Scenario 3`.  This will create 2 identical quads, one offset from its target point (but initialized with yaw = 0) and second offset from target point but yaw = 45 degrees.
-
- - implement the code in the function `LateralPositionControl()`
- - implement the code in the function `AltitudeControl()`
- - tune parameters `kpPosZ` and `kpPosZ`
- - tune parameters `kpVelXY` and `kpVelZ`
-
-If successful, the quads should be going to their destination points and tracking error should be going down (as shown below). However, one quad remains rotated in yaw.
-
- - implement the code in the function `YawControl()`
- - tune parameters `kpYaw` and the 3rd (z) component of `kpPQR`
-
-Tune position control for settling time. Don’t try to tune yaw control too tightly, as yaw control requires a lot of control authority from a quadcopter and can really affect other degrees of freedom.  This is why you often see quadcopters with tilted motors, better yaw authority!
-
-<p align="center">
-<img src="animations/scenario3.gif" width="500"/>
-</p>
-
-**Hint:**  For a second order system, such as the one for this quadcopter, the velocity gain (`kpVelXY` and `kpVelZ`) should be at least ~3-4 times greater than the respective position gain (`kpPosXY` and `kpPosZ`).
 
 ### Non-idealities and robustness (scenario 4) ###
 
