@@ -214,6 +214,65 @@ PASS: ABS(Quad3.PosFollowErr) was less than 0.100000 for at least 1.500000 secon
 
  ## scenario 5: Tracking trajectories ##
  
+ Here for **challenge 1** I add the velocity information per time step by doing the following:
+ 
+ ```Python
+ if (t > 0):	
+			vx = (x - px) / timestep
+			vy = (y - py) / timestep
+			vz = (z - pz) / timestep
+ px, py, pz = x, y, z
+ the_file.write("," + fmt(vx) + "," + fmt(vy) + "," + fmt(vz))
+ ```
+ I then tried my hand at challenge 2 by adding roll pitch and yaw values followed by the roll pitch and yaw rates. I modified the path for the orange drone to compare the two. It was interesting to see that the orange droned out performed, matched and under performed against the yellow drone depending on how the parameters were tuned in `QuadControlParams`. I think I will spend a bit more time on this post submission.
+ 
+ ```Python
+  yaw, pitch, roll = 0.0, 0.0, 0.0
+		p, q, r =  0.0, 0.0, 0.0	
+		
+		if (t > 0):	
+			vx = (x - px) / timestep
+			vy = (y - py) / timestep
+			vz = (z - pz) / timestep
+		
+			if (t < maxtime):
+
+				fx = math.sin((t + timestep) * 2 * math.pi / period[0] + phase[0]) * radius * amp[0] + center[0]
+				fy = math.sin((t + timestep) * 2 * math.pi / period[1] + phase[1]) * radius * amp[1] + center[1]
+				fz = math.sin((t + timestep) * 2 * math.pi / period[2] + phase[2]) * radius * amp[2] + center[2]
+
+				p1 = np.array([px,py,pz])
+				p2 = np.array([x,y,z])
+				p3 = np.array([fx,fy,fz])
+
+				v1 = np.subtract(p2,p1)
+				v2 = np.subtract(p3,p2)
+
+				R = rotation_matrix_from_vectors(v1,v2)
+				sy = math.sqrt(R[0,0] * R[0,0] +  R[1,0] * R[1,0])
+
+				roll = math.atan2(R[2,1] , R[2,2])
+				pitch = math.atan2(-R[2,0], sy)
+				yaw = math.atan2(R[1,0], R[0,0])
+
+				p = roll / timestep
+				q = pitch / timestep
+				r = roll / timestep
+
+		px, py, pz = x, y, z
+
+		######## END STUDENT CODE
+		the_file.write("," + fmt(vx) + "," + fmt(vy) + "," + fmt(vz))
+		the_file.write("," + fmt(yaw) + "," + fmt(pitch) + "," + fmt(roll))
+		the_file.write("," + fmt(p) + "," + fmt(q) + "," + fmt(r))
+  ```
+ 
+ After some tuning and going back to the other scenarios for further tuning we have successful flights in all 5 scenarios!
+ 
+ <p align="center">
+<img src="animations/scenario_5.gif" width="500"/>
+</p>
+ 
  **Evaluation:**
    - position error of the quad should be less than 0.25 meters for at least 3 seconds
 ```
@@ -222,54 +281,4 @@ PASS: ABS(Quad2.PosFollowErr) was less than 0.250000 for at least 3.000000 secon
 ```
 
 
-### Tracking trajectories ###
 
-Now that we have all the working parts of a controller, you will put it all together and test it's performance once again on a trajectory.  For this simulation, you will use `Scenario 5`.  This scenario has two quadcopters:
- - the orange one is following `traj/FigureEight.txt`
- - the other one is following `traj/FigureEightFF.txt` - for now this is the same trajectory.  For those interested in seeing how you might be able to improve the performance of your drone by adjusting how the trajectory is defined, check out **Extra Challenge 1** below!
-
-How well is your drone able to follow the trajectory?  It is able to hold to the path fairly well?
-
-
-### Extra Challenge 1 (Optional) ###
-
-You will notice that initially these two trajectories are the same. Let's work on improving some performance of the trajectory itself.
-
-1. Inspect the python script `traj/MakePeriodicTrajectory.py`.  Can you figure out a way to generate a trajectory that has velocity (not just position) information?
-
-2. Generate a new `FigureEightFF.txt` that has velocity terms
-Did the velocity-specified trajectory make a difference? Why?
-
-With the two different trajectories, your drones' motions should look like this:
-
-<p align="center">
-<img src="animations/scenario5.gif" width="500"/>
-</p>
-
-
-### Extra Challenge 2 (Optional) ###
-
-For flying a trajectory, is there a way to provide even more information for even better tracking?
-
-How about trying to fly this trajectory as quickly as possible (but within following threshold)!
-
-
-## Evaluation ##
-
-To assist with tuning of your controller, the simulator contains real time performance evaluation.  We have defined a set of performance metrics for each of the scenarios that your controllers must meet for a successful submission.
-
-There are two ways to view the output of the evaluation:
-
- - in the command line, at the end of each simulation loop, a **PASS** or a **FAIL** for each metric being evaluated in that simulation
- - on the plots, once your quad meets the metrics, you will see a green box appear on the plot notifying you of a **PASS**
-
-
-### Performance Metrics ###
-
-The specific performance metrics are as follows:
-
- 
-
-## Authors ##
-
-Thanks to Fotokite for the initial development of the project code and simulator.
