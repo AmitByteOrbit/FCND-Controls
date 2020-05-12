@@ -71,16 +71,13 @@ VehicleCommand QuadControl::GenerateMotorCommands(float collThrustCmd, V3F momen
     
     ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
     
+    // Find forces from moments
     float l =  L / sqrtf(2.f);
     float fx = momentCmd.x / l;
     float fy = momentCmd.y / l;
     float fz = - momentCmd.z / kappa;
     
-//    cmd.desiredThrustsN[0] = 0.25f * (collThrustCmd + fx + fy + fz); // front left
-//    cmd.desiredThrustsN[1] = 0.25f * (collThrustCmd - fx + fy - fz); // front right
-//    cmd.desiredThrustsN[2] = 0.25f * (collThrustCmd + fx - fy - fz); // rear left
-//    cmd.desiredThrustsN[3] = 0.25f * (collThrustCmd - fx - fy + fz); // rear right
-    
+    // set thrust and constrain each motor to its min and max values
     cmd.desiredThrustsN[0] = CONSTRAIN(0.25f * (collThrustCmd + fx + fy + fz), minMotorThrust, maxMotorThrust); // front left
     cmd.desiredThrustsN[1] = CONSTRAIN(0.25f * (collThrustCmd - fx + fy - fz), minMotorThrust, maxMotorThrust); // front right
     cmd.desiredThrustsN[2] = CONSTRAIN(0.25f * (collThrustCmd + fx - fy - fz), minMotorThrust, maxMotorThrust); // rear left
@@ -114,6 +111,7 @@ V3F QuadControl::BodyRateControl(V3F pqrCmd, V3F pqr)
     V3F momentCmd;
     
     ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
+    // Calculate moments
     V3F rate_error = (pqrCmd - pqr) * kpPQR;
     momentCmd.x = rate_error.x * Ixx;
     momentCmd.y = rate_error.y * Iyy;
@@ -149,9 +147,13 @@ V3F QuadControl::RollPitchControl(V3F accelCmd, Quaternion<float> attitude, floa
     ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
     
     if (collThrustCmd > 0.0) {
+        
+        // convert thrust from newtons to accelleration
         float c_d = collThrustCmd / mass;
         
+        // constrain the roll angle
         float target_R13 = -CONSTRAIN(accelCmd.x / c_d, -maxTiltAngle, maxTiltAngle);
+        // constrain the pitch angle
         float target_R23 = -CONSTRAIN(accelCmd.y / c_d, -maxTiltAngle, maxTiltAngle);
         
         pqrCmd.x = (1/R(2, 2)) * (R(1, 0) * ( kpBank * (target_R13 - R(0, 2)) ) - R(0, 0) * ( kpBank * (target_R23 - R(1, 2)) ) );
@@ -195,12 +197,13 @@ float QuadControl::AltitudeControl(float posZCmd, float velZCmd, float posZ, flo
     float thrust = 0;
     
     ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
-    
+    // constrain the descent and ascent rates
     float z_vel =  CONSTRAIN(kpPosZ * (posZCmd - posZ ) + velZCmd, -maxDescentRate, maxAscentRate);
+    // the basic integral controller in the PID control
     integratedAltitudeError += (posZCmd - posZ) * dt;
-    float u_bar = + kpVelZ * (z_vel - velZ) + (KiPosZ * integratedAltitudeError) + accelZCmd;
-//    float u_bar = + kpVelZ * (z_vel - velZ) + accelZCmd;
+    float u_bar = kpVelZ * (z_vel - velZ) + (KiPosZ * integratedAltitudeError) + accelZCmd;
     
+    // set the thrust to Newtons and set the direction of the force
     thrust = -(mass * (u_bar - CONST_GRAVITY) / R(2,2));
     
     /////////////////////////////// END STUDENT CODE ////////////////////////////
@@ -244,21 +247,20 @@ V3F QuadControl::LateralPositionControl(V3F posCmd, V3F velCmd, V3F pos, V3F vel
     
     p_term = kpPosXY * (posCmd - pos);
     
+    // limit the velocity in proportion for x and y
     if (velCmd.magXY() > maxSpeedXY) {
         velCmd = velCmd * maxSpeedXY / velCmd.magXY();
     }
     
+    // limit the acceleration in proportion for x and y
     d_term - kpVelXY * (velCmd - vel);
-    
-//    accelCmd += p_term + d_term;
-    
+        
     if (accelCmd.magXY() > maxAccelXY){
         accelCmd = accelCmd * maxAccelXY / accelCmd.magXY();
     }
     
     accelCmd = kpPosXY * (posCmd - pos) + kpVelXY * (velCmd - vel) + accelCmd;
 
-    
     /////////////////////////////// END STUDENT CODE ////////////////////////////
     
     return accelCmd;
@@ -280,9 +282,11 @@ float QuadControl::YawControl(float yawCmd, float yaw)
     float yawRateCmd=0;
     ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
     
+    //keep yaw command in 0 - 180 degree range
     yawCmd = fmodf(yawCmd, 2.f * M_PI);
     float yaw_err = yawCmd - yaw;
     
+    //optimize direction of yaw
     if (yaw_err > M_PI){
         yaw_err -= 2.f * M_PI;
     } else if (yaw_err < -M_PI) {
