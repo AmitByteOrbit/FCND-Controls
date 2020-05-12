@@ -59,6 +59,8 @@ This was pretty tricky for me as it was different to the what we implemented in 
     
  ```
  
+ 
+ 
  **2. Implement `BodyRateControl()`** 
  
  This was pretty straight forward based on the course work. Creating the moments based on the error and applying the moments of intertia.
@@ -111,13 +113,15 @@ PASS: ABS(Quad.Roll) was less than 0.025000 for at least 0.750000 seconds
 PASS: ABS(Quad.Omega.X) was less than 2.500000 for at least 0.750000 seconds
 ```
 
+
+
  ## scenario 3: Position/velocity and yaw angle control ##
  
  **1. Implement `LateralPositionControl()`**
  The tricky part of implementing LateralPositionControl was figuring out which values to clamp. I chose to clamp the _commaded velocity_ and the _feed forward acceleration_ values but I look forward from the examiner as to whether this is correct. Note: `accelCmd` is always initialized with the _feed forward_ value hence clamping `accelCmd`.
  
  ```C++
- V3F p_term;
+    V3F p_term;
     V3F d_term;
     
     p_term = kpPosXY * (posCmd - pos);
@@ -139,9 +143,9 @@ PASS: ABS(Quad.Omega.X) was less than 2.500000 for at least 0.750000 seconds
  Altitude Control was implemented as a PD controller with clamping on the velocity. Later on for scenario 4 this was converted to a PID controller by implementing basic integral control.
  
  ```C++
- float z_vel =  CONSTRAIN(kpPosZ * (posZCmd - posZ ) + velZCmd, -maxDescentRate, maxAscentRate);
+    float z_vel =  CONSTRAIN(kpPosZ * (posZCmd - posZ ) + velZCmd, -maxDescentRate, maxAscentRate);
     integratedAltitudeError += (posZCmd - posZ) * dt;
-    float u_bar = + kpVelZ * (z_vel - velZ) + (KiPosZ * integratedAltitudeError) + accelZCmd;
+    float u_bar = kpVelZ * (z_vel - velZ) + (KiPosZ * integratedAltitudeError) + accelZCmd;
     
     thrust = -(mass * (u_bar - CONST_GRAVITY) / R(2,2));
  ```
@@ -150,7 +154,7 @@ PASS: ABS(Quad.Omega.X) was less than 2.500000 for at least 0.750000 seconds
  Implemented a P controller for yaw command and added optimization for clockwise vs counter-clockwise rotation.
  
  ```C++
- yawCmd = fmodf(yawCmd, 2.f * M_PI);
+    yawCmd = fmodf(yawCmd, 2.f * M_PI);
     float yaw_err = yawCmd - yaw;
     
     if (yaw_err > M_PI){
@@ -173,42 +177,49 @@ PASS: ABS(Quad.Omega.X) was less than 2.500000 for at least 0.750000 seconds
    - Quad2 yaw should be within 0.1 of the target for at least 1 second
    
  ```
- Simulation #56 (../config/3_PositionControl.txt)
+Simulation #56 (../config/3_PositionControl.txt)
 PASS: ABS(Quad1.Pos.X) was less than 0.100000 for at least 1.250000 seconds
 PASS: ABS(Quad2.Pos.X) was less than 0.100000 for at least 1.250000 seconds
 PASS: ABS(Quad2.Yaw) was less than 0.100000 for at least 1.000000 seconds
 ```
 
+
+
  ## scenario 4: Non-idealities and robustness ##
  
  **1. Add basic integral control to `AltitudeControl()`** 
+ Added integral control by keeping the accumulated velocity error.
  
+  ```C++
+    integratedAltitudeError += (posZCmd - posZ) * dt;
+    float u_bar = kpVelZ * (z_vel - velZ) + (KiPosZ * integratedAltitudeError) + accelZCmd;
+ ```
+ 
+ After tuning `KiPosZ` and adjusting almost all the other variables we have a decent flight.
+ 
+ <p align="center">
+<img src="animations/scenario_4.gif" width="500"/>
+</p>
  
  **Evaluation:**
    - position error for all 3 quads should be less than 0.1 meters for at least 1.5 seconds
+```
+Simulation #78 (../config/4_Nonidealities.txt)
+PASS: ABS(Quad1.PosFollowErr) was less than 0.100000 for at least 1.500000 seconds
+PASS: ABS(Quad2.PosFollowErr) was less than 0.100000 for at least 1.500000 seconds
+PASS: ABS(Quad3.PosFollowErr) was less than 0.100000 for at least 1.500000 seconds
+```
+
+
 
  ## scenario 5: Tracking trajectories ##
  
  **Evaluation:**
    - position error of the quad should be less than 0.25 meters for at least 3 seconds
-
-
-### Non-idealities and robustness (scenario 4) ###
-
-In this part, we will explore some of the non-idealities and robustness of a controller.  For this simulation, we will use `Scenario 4`.  This is a configuration with 3 quads that are all are trying to move one meter forward.  However, this time, these quads are all a bit different:
- - The green quad has its center of mass shifted back
- - The orange vehicle is an ideal quad
- - The red vehicle is heavier than usual
-
-1. Run your controller & parameter set from Step 3.  Do all the quads seem to be moving OK?  If not, try to tweak the controller parameters to work for all 3 (tip: relax the controller).
-
-2. Edit `AltitudeControl()` to add basic integral control to help with the different-mass vehicle.
-
-3. Tune the integral control, and other control parameters until all the quads successfully move properly.  Your drones' motion should look like this:
-
-<p align="center">
-<img src="animations/scenario4.gif" width="500"/>
-</p>
+```
+Simulation #90 (../config/5_TrajectoryFollow.txt)
+PASS: ABS(Quad2.PosFollowErr) was less than 0.250000 for at least 3.000000 seconds
+```
 
 
 ### Tracking trajectories ###
