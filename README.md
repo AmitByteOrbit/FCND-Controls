@@ -8,7 +8,7 @@ Below I outline my
 * a video / image demo 
 * and finally the performance metrics.
 
-### scenario 1: Intro (Hover) ###
+## scenario 1: Intro (Hover) ##
 Upon looking at the thrust as hinted in the outline one can see that the only parameter that can be changed is **mass** which is located in the _QuadControls.txt_. 
 
 ```
@@ -32,11 +32,10 @@ PASS: ABS(Quad.PosFollowErr) was less than 0.500000 for at least 0.800000 second
 Simulation #4 (../config/1_Intro.txt)
 ```
 
-### scenario 2: Body rate and roll/pitch control ###
-**1. Implement body rate control**
+## scenario 2: Body rate and roll/pitch control ##
+**1. Implement`GenerateMotorCommands()`**
 
- - _implement the code in the function `GenerateMotorCommands()`_<br>
- This was pretty tricky for me as it was different to the what we implemented in the coursework. However taking a logical approach to this problem was key. It came down to solving the force matrix (below) by first calculating the Roll, Pitch and Yaw commands from the moments.
+This was pretty tricky for me as it was different to the what we implemented in the coursework. However taking a logical approach to this problem was key. It came down to solving the force matrix (below) by first calculating the Roll, Pitch and Yaw commands from the moments.
  
  
  _Collective Thrust: F1 + F2 + F3 + F4 = Tf<br>
@@ -60,11 +59,47 @@ Simulation #4 (../config/1_Intro.txt)
     
  ```
  
- - implement the code in the function `BodyRateControl()`
+ **2. Implement `BodyRateControl()`** 
+ 
+ This was pretty straight forward based on the course work. Creating the moments based on the error and applying the moments of intertia.
+ 
+ ```
+ V3F rate_error = (pqrCmd - pqr) * kpPQR;
+ momentCmd.x = rate_error.x * Ixx;
+ momentCmd.y = rate_error.y * Iyy;
+ momentCmd.z = rate_error.z * Izz;
+ ```
+ 
+Next it was the initial tuning of `kpPQR` in `QuadControlParams.txt` to get the vehicle to stop spinning quickly but not overshoot. This turned out to be only the begining of tuning these parameters :)
+ 
+ **3. Implement `RollPitchControl()`**
+ 
+ This one was a bit tricky with the _collThrustCmd_ being in N. In the course work it was implemented differently but applying the equatino F=ma it was easy enough to convert and once that was solved the rest was pretty inline with the equations for calculation the pqr commands using the rotation matrix.
+ 
+ ```C++
+ if (collThrustCmd > 0.0) {
+        float c_d = collThrustCmd / mass;
+        
+        float target_R13 = -CONSTRAIN(accelCmd.x / c_d, -maxTiltAngle, maxTiltAngle);
+        float target_R23 = -CONSTRAIN(accelCmd.y / c_d, -maxTiltAngle, maxTiltAngle);
+        
+        pqrCmd.x = (1/R(2, 2)) * (R(1, 0) * ( kpBank * (target_R13 - R(0, 2)) ) - R(0, 0) * ( kpBank * (target_R23 - R(1, 2)) ) );
+        
+        pqrCmd.y = (1/R(2, 2)) * (R(1, 1) * ( kpBank * (target_R13 - R(0, 2)) ) - R(0, 1) * ( kpBank * (target_R23 - R(1, 2)) ) );
+        
+        pqrCmd.z = 0.0f;
+    }
+    else {
+        // Otherwise command no rate
+        pqrCmd.x = 0.0;
+        pqrCmd.y = 0.0;
+    }
+ ```
  
  
- - Tune `kpPQR` in `QuadControlParams.txt` to get the vehicle to stop spinning quickly but not overshoot
- 
+ <p align="center">
+<img src="animations/scenario_2.gif" width="500"/>
+</p>
  
 **Evaluation:**
    - roll should less than 0.025 radian of nominal for 0.75 seconds (3/4 of the duration of the loop)
@@ -75,50 +110,30 @@ PASS: ABS(Quad.Roll) was less than 0.025000 for at least 0.750000 seconds
 PASS: ABS(Quad.Omega.X) was less than 2.500000 for at least 0.750000 seconds
 ```
 
- ### scenario 3: Position/velocity and yaw angle control ###
+ ## scenario 3: Position/velocity and yaw angle control ##
+ 
+ **1. Implement `LateralPositionControl()`**
+ 
+ **2. Implement `AltitudeControl()`**
+ 
+ **3. Implement  `YawControl()`**
  
  **Evaluation:**
    - X position of both drones should be within 0.1 meters of the target for at least 1.25 seconds
    - Quad2 yaw should be within 0.1 of the target for at least 1 second
 
- ### scenario 4: Non-idealities and robustness ###
+ ## scenario 4: Non-idealities and robustness ##
+ 
+ **1. Add basic integral control to `AltitudeControl()`** 
+ 
  
  **Evaluation:**
    - position error for all 3 quads should be less than 0.1 meters for at least 1.5 seconds
 
- ### scenario 5: Tracking trajectories ###
+ ## scenario 5: Tracking trajectories ##
  
  **Evaluation:**
    - position error of the quad should be less than 0.25 meters for at least 3 seconds
-
-### Body rate and roll/pitch control (scenario 2) ###
-
-
-First, you will implement the body rate and roll / pitch control.  For the simulation, you will use `Scenario 2`.  In this scenario, you will see a quad above the origin.  It is created with a small initial rotation speed about its roll axis.  Your controller will need to stabilize the rotational motion and bring the vehicle back to level attitude.
-
-To accomplish this, you will:
-
-1. Implement body rate control
-
- - implement the code in the function `GenerateMotorCommands()`
- - implement the code in the function `BodyRateControl()`
- - Tune `kpPQR` in `QuadControlParams.txt` to get the vehicle to stop spinning quickly but not overshoot
-
-If successful, you should see the rotation of the vehicle about roll (omega.x) get controlled to 0 while other rates remain zero.  Note that the vehicle will keep flying off quite quickly, since the angle is not yet being controlled back to 0.  Also note that some overshoot will happen due to motor dynamics!.
-
-If you come back to this step after the next step, you can try tuning just the body rate omega (without the outside angle controller) by setting `QuadControlParams.kpBank = 0`.
-
-2. Implement roll / pitch control
-We won't be worrying about yaw just yet.
-
- - implement the code in the function `RollPitchControl()`
- - Tune `kpBank` in `QuadControlParams.txt` to minimize settling time but avoid too much overshoot
-
-If successful you should now see the quad level itself (as shown below), though it’ll still be flying away slowly since we’re not controlling velocity/position!  You should also see the vehicle angle (Roll) get controlled to 0.
-
-<p align="center">
-<img src="animations/scenario2.gif" width="500"/>
-</p>
 
 
 ### Position/velocity and yaw angle control (scenario 3) ###
