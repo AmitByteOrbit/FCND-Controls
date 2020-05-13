@@ -39,9 +39,9 @@ This was pretty tricky for me as it was different to the what we implemented in 
  
  
  _Collective Thrust: F1 + F2 + F3 + F4 = Tf<br>
-  Roll Command:      F1 + F2 + F3 + F4 = Tx/l<br>
- Pitch Command:     F1 + F2 + F3 + F4 = Ty/l<br>
- Yaw Command:       F1 + F2 + F3 + F4 = Tz/kappa_<br>
+  Roll Command:      F1 - F2 - F3 + F4 = Tx/l<br>
+ Pitch Command:     F1 + F2 - F3 - F4 = Ty/l<br>
+ Yaw Command:       F1 - F2 + F3 - F4 = Tz/kappa_<br>
  
  
  It was important to pay attention to the rotor positions. The above is base on the following:
